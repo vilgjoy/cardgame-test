@@ -1,0 +1,56 @@
+{% extends "layout.njk" %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    
+    <canvas id="combat-arena" width="800" height="600" style="display: none;"></canvas>
+
+    <div id="enemy-hp-circle" class="hp-circle enemy-hp">
+        <span id="enemy-hp-text">20</span>
+    </div>
+    
+    <div id="player-hp-circle" class="hp-circle player-hp">
+        <span id="player-hp-text">20</span>
+    </div>
+
+    <div id="game-area">
+        <div id="energy-container">
+            <div id="energy-circle" class="zone">
+                <span id="energy-text">4 / 4</span>
+            </div>
+        </div>
+
+        <h2>Motståndare sida</h2>
+        <div id="enemy-board" class="zone" style="min-height: 120px; border: 2px dashed #e74c3c; padding: 10px; margin-bottom: 20px; display: flex; gap: 10px; background-color: rgba(231, 76, 60, 0.05);"></div>
+        
+
+
+        <h2>Spelplan</h2>
+        <div id="board-container">
+            <div id="frontline" class="zone board-half"></div>
+
+            <div id="transform-zone" class="zone">
+                <span style="color: rgba(255,255,255,0.4); font-weight: bold; text-transform: uppercase;">Transform</span>
+            </div>
+
+            <div id="backline" class="zone board-half"></div>
+        </div>
+
+        <div id="bottom-area">
+            <div id="deck-area">
+                <div id="deck-visual">Lek: <span id="deck-count">20</span></div>
+            </div>
+            
+            <div id="hand-area">
+                <h2>Din Hand</h2>
+                <div id="hand" class="zone"></div>
+                <button id="draw-btn">Dra ett kort</button>
+                <button id="ready-btn" style="background-color: #2ecc71; color: white;">KLAR</button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="/script.js"></script>
+{% endblock %}
+
+<!-- kanske behöver ändra på motståndare sida så att style finns i style.cs -->
