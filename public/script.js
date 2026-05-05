@@ -24,6 +24,8 @@ let currentRound = 1;
 let playerHP = 16;
 let enemyHP = 20;
 let battlesLost = 0;
+let roundStrBuff = 0;
+let roundConBuff = 0;
 
 let myCoreEcho;
 let aiCoreEcho;
@@ -37,7 +39,7 @@ let aiBoardData = [];
 // deck
 let playerDeck = [];
 let aiDeck = [];
-let cardCounts = {}; // håller koll på hur många av varje kort
+let cardCounts = {}; 
 
 const infernoDeckList = [
     "Chop Chop Headless", "SpearBack", "Snip Snap", "Diggy Duggy", "Sabyr Boar", 
@@ -107,6 +109,45 @@ function updateDeckUI() {
     deckCountText.innerText = playerDeck.length;
 }
 
+function updateAllCardsUI() {
+    const allCards = document.querySelectorAll('.card');
+    
+    allCards.forEach(card => {
+        const isOnBoard = card.closest('#frontline') || card.closest('#backline');
+        
+        const strEl = card.querySelector('.stat-str');
+        const conEl = card.querySelector('.stat-con');
+        
+        if (strEl && conEl) {
+            const baseStr = parseInt(card.dataset.str) || 0;
+            const baseCon = parseInt(card.dataset.con) || 0;
+            
+            const tempStr = parseInt(card.dataset.tempStr) || 0;
+            const tempCon = parseInt(card.dataset.tempCon) || 0;
+            
+            const totalRoundStr = (typeof roundStrBuff !== 'undefined') ? roundStrBuff : 0;
+            const totalRoundCon = (typeof roundConBuff !== 'undefined') ? roundConBuff : 0;
+
+            const extraStr = isOnBoard ? (totalRoundStr + tempStr) : 0;
+            const extraCon = isOnBoard ? (totalRoundCon + tempCon) : 0;
+            
+            const currentStr = baseStr + extraStr;
+            const currentCon = baseCon + extraCon;
+            
+            strEl.innerHTML = `⚔️ ${currentStr}`;
+            conEl.innerHTML = `❤️ ${currentCon}`;
+            
+            strEl.style.color = extraStr > 0 ? '#2ecc71' : '';
+            conEl.style.color = extraCon > 0 ? '#2ecc71' : '';
+            
+            // Debug-logg (ta bort denna när det fungerar)
+            if (isOnBoard && (tempStr > 0 || tempCon > 0)) {
+                console.log(`Visar buff för ${card.dataset.name}: +${tempStr} STR från Echo Skill`);
+            }
+        }
+    });
+}
+
 function shuffleDeck(deck) {
     for (let i = deck.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
@@ -125,6 +166,7 @@ function createCard(cardData, existingModulations = 0) {
     //spar data för miniräknare
     card.dataset.cost = cardData.cost;
     card.dataset.transformEffect = cardData.transformEffect || "";
+    card.dataset.transformCost = cardData.transformCost !== undefined ? cardData.transformCost : cardData.cost;
     card.dataset.baseCost = cardData.cost; 
     card.dataset.str = cardData.str;
     card.dataset.dmg = cardData.dmg;
@@ -133,6 +175,9 @@ function createCard(cardData, existingModulations = 0) {
     card.dataset.modulations = existingModulations; // startar på 0
     card.dataset.modulateEffect = cardData.modulateEffect || "";
     card.dataset.activeEffect = cardData.activeEffect || "";
+    cardData.tempStr = cardData.tempStr || 0;
+    cardData.tempCon = cardData.tempCon || 0;
+    cardData.buffDuration = cardData.buffDuration || 0;
     card.dataset.specialSkill = cardData.specialSkill || ""; 
     card.dataset.activeSpecialSkill = cardData.activeSpecialSkill || "";
 
@@ -157,9 +202,9 @@ function createCard(cardData, existingModulations = 0) {
         ${cardData.skillText ? `<div class="card-skill" style="font-size: 10px; color: #f1c40f; text-align: center; margin-top: 5px; font-style: italic;">✨ ${cardData.skillText}</div>` : ''}
         ${cardData.activeSpecialSkill ? `<div class="active-skill" style="font-size: 10px; color: #e74c3c; font-weight: bold; text-align: center;">🔥 ${cardData.activeSpecialSkill.toUpperCase()} AKTIVERAD!</div>` : ''}
         <div class="card-stats">
-            <span title="Strength">⚔️ ${cardData.str}</span>
-            <span title="Damage">💥 ${cardData.dmg}</span>
-            <span title="Constitution (HP)">❤️ ${cardData.con}</span>
+            <span class="stat-str" title="Strength">⚔️ ${cardData.str}</span>
+            <span class="stat-dmg" title="Damage">💥 ${cardData.dmg}</span>
+            <span class="stat-con" title="Constitution (HP)">❤️ ${cardData.con}</span>
         </div>
     `;
     
@@ -256,6 +301,17 @@ readyBtn.addEventListener('click', () => {
     playerCardsData = playerCardsData.map(card => {
         let updatedCard = { ...card }; 
 
+        if (roundStrBuff > 0) {
+            updatedCard.str += roundStrBuff;
+        }
+
+        if (roundConBuff > 0) {
+            updatedCard.con += roundConBuff;
+        }
+
+        if (updatedCard.tempStr > 0) updatedCard.str += updatedCard.tempStr;
+        if (updatedCard.tempCon > 0) updatedCard.con += updatedCard.tempCon;
+
         if (updatedCard.activeSpecialSkill === "last-stand") {
             if (hasInfernoRider) {
                 updatedCard.str += 3;
@@ -275,6 +331,18 @@ readyBtn.addEventListener('click', () => {
 
         return updatedCard;
     });
+
+    // flank force
+    const hasFlankForce = playerCardsData.some(card => card.specialSkill === "flank-force" || card.activeSpecialSkill === "flank-force");
+    
+    if (hasFlankForce && playerCardsData.length === 3) {
+        console.log("[FLANK FORCE] Aktiverad! Exakt 3 Echoes på brädet. Alla får +1 DMG.");
+        playerCardsData = playerCardsData.map(card => {
+            let updatedCard = { ...card };
+            updatedCard.dmg += 1;
+            return updatedCard;
+        });
+    }
 
     const enemyCardsData = aiBoardData;
 
@@ -322,7 +390,28 @@ readyBtn.addEventListener('click', () => {
 
         currentRound++;
         currentEnergy = maxEnergy;
+        roundStrBuff = 0;
+        roundConBuff = 0;
+        const boardCardsElements = [...frontline.children, ...backline.children];
+        boardCardsElements.forEach(cardEl => {
+            let cardData = JSON.parse(cardEl.dataset.fullData);
+            if (cardData.buffDuration > 0) {
+                cardData.buffDuration -= 1;
+                
+                if (cardData.buffDuration <= 0) {
+                    cardData.tempStr = 0;
+                    cardData.tempCon = 0;
+                    console.log(`[TIMEOUT] ${cardData.name} tappade sin temporära Modulate-buff.`);
+                }
+                
+                cardEl.dataset.tempStr = cardData.tempStr;
+                cardEl.dataset.tempCon = cardData.tempCon;
+                cardEl.dataset.buffDuration = cardData.buffDuration;
+                cardEl.dataset.fullData = JSON.stringify(cardData);
+            }
+        });
         updateEnergyUI();
+        updateAllCardsUI();
 
         const cardsInHand = Array.from(hand.children);
         cardsInHand.forEach(card => {
@@ -406,28 +495,80 @@ zones.forEach(zone => {
         // transform
         if (zone === transformZone) {
             const effect = draggingCard.dataset.transformEffect;
+            const transformCost = parseInt(draggingCard.dataset.transformCost); // Använd transformCost
 
             if (!effect) {
-                alert("detta kort har ingen transformeffekt");
+                alert("Detta kort har ingen transformeffekt");
                 return;
             }
 
-            if (currentEnergy < cardCost) {
-                alert("inte tillräckligt med energi");
+            if (currentEnergy < transformCost) {
+                alert(`Inte tillräckligt med energi! Transformen kostar ${transformCost}.`);
                 return;
             }
 
-            currentEnergy -= cardCost;
+            currentEnergy -= transformCost; // Dra rätt mängd energi
+
             if (effect === "draw3") {
                 for (let i = 0; i < 3; i++) drawCardFromDeck();
-                console.log("transform: draw 3 cards");
+                console.log("Transform: Draw 3 cards");
             }
             else if (effect === "energy3") {
                 currentEnergy += 3;
-                console.log("transform: gain 3 energy");
+                console.log("Transform: Gain 3 energy");
             }
+            else if (effect === "strBuff1") {
+                roundStrBuff += 1;
+                console.log(`Transform: Alla dina Echoes får +1 STR denna runda! (Total: +${roundStrBuff})`);
+            }
+            // chop chop headless transform
+            else if (effect === "chopChopBuff") {
+                roundStrBuff += 2;
+                roundConBuff += 1;
+                console.log(`Transform: Alla dina Echoes får +2 STR och +1 CON denna runda!`);
+            }
+            // fission junrock transform
+            else if (effect === "discoverCost1") {
+                const cost1Cards = playerDeck.filter(c => c.cost === 1);
+                
+                if (cost1Cards.length === 0) {
+                    alert("Du har inga 1-cost kort kvar i leken!");
+                    currentEnergy += transformCost; 
+                    return;
+                }
+
+                const options = cost1Cards.slice(0, 3);
+                let promptText = "Välj ett kort att lägga till i handen (skriv en siffra):\n\n";
+                
+                options.forEach((c, index) => {
+                    promptText += `${index + 1}: ${c.name} (STR: ${c.str}, DMG: ${c.dmg}, CON: ${c.con})\n`;
+                });
+
+                let choice = prompt(promptText);
+                let selectedIndex = parseInt(choice) - 1;
+
+                if (isNaN(selectedIndex) || selectedIndex < 0 || selectedIndex >= options.length) {
+                    alert("Ogiltigt val eller avbrutet. Första kortet valdes automatiskt.");
+                    selectedIndex = 0;
+                }
+
+                const chosenCard = options[selectedIndex];
+
+                const deckIndex = playerDeck.findIndex(c => c === chosenCard);
+                if (deckIndex !== -1) {
+                    playerDeck.splice(deckIndex, 1);
+                }
+
+                hand.appendChild(createCard(chosenCard));
+                
+                shuffleDeck(playerDeck);
+                updateDeckUI();
+                console.log(`Transform: Valde ${chosenCard.name} från leken.`);
+            }
+
             updateEnergyUI();
             draggingCard.remove();
+            updateAllCardsUI();
             return;
         }
 
@@ -495,21 +636,58 @@ zones.forEach(zone => {
             const activeSkillB = cardB.dataset.activeSpecialSkill;
             const inheritedSkill = dormantSkillB || activeSkillB || ""; 
 
+            const nameA = JSON.parse(cardA.dataset.fullData).name;
+            const nameB = JSON.parse(cardB.dataset.fullData).name;
+
+            let tempStr = parseInt(cardB.dataset.tempStr) || 0;
+            let tempCon = parseInt(cardB.dataset.tempCon) || 0;
+            let buffDuration = parseInt(cardB.dataset.buffDuration) || 0;
+
+
+
+            const boardCards = [...frontline.children, ...backline.children];
+            const hasFlankForce = boardCards.some(el => {
+                const d = JSON.parse(el.dataset.fullData);
+                return d.specialSkill === "flank-force" || d.activeSpecialSkill === "flank-force";
+            });
+            const isFlankForceActive = hasFlankForce && boardCards.length === 3;
+
+            // orkar inte göra om så att jag skriver på cards.js
+            if ((nameA === "SpearBack" || nameB === "SpearBack") && isFlankForceActive) {
+                tempStr += 2;
+                tempCon += 2;
+                buffDuration = Math.max(buffDuration, 2); // Räcker i 2 rundor
+                console.log("[ECHO SKILL] Spearback modulerades med Flank Force! +2 STR/CON i 2 rundor.");
+            }
+
+            // orkar inte göra om så att jag skriver på cards.js
+            if (nameA === "Baby Viridblaze" || nameB === "Baby Viridblaze") {
+                tempStr += 2;
+                tempCon += 1;
+                buffDuration = Math.max(buffDuration, 1); 
+                console.log("[ECHO SKILL] Baby Viridblaze modulerades! +2 STR och +1 CON denna runda.");
+            }
+
             const originalDataA = JSON.parse(cardA.dataset.fullData);
             const modulatedData = {
                 ...originalDataA, 
                 str: newStr, 
                 dmg: newDmg, 
                 con: newCon,
-                activeSpecialSkill: inheritedSkill // Detta aktiverar förmågan!
+                activeSpecialSkill: inheritedSkill,
+                tempStr: tempStr,          
+                tempCon: tempCon,          
+                buffDuration: buffDuration 
             };
 
             const newModulatedCard = createCard(modulatedData, modulationsB + 1);
 
-            cardB.replaceWith(newModulatedCard);
-            cardA.remove(); 
-            
+            const targetZone = targetCard.parentElement;
+            targetZone.replaceChild(newModulatedCard, targetCard);
+            draggingCard.remove();
+
             console.log("Modulation lyckades!");
+            updateAllCardsUI();
             return; 
         }
 
@@ -554,6 +732,7 @@ zones.forEach(zone => {
         }
 
         zone.appendChild(draggingCard);
+        updateAllCardsUI();
     });
 });
 
@@ -565,6 +744,7 @@ function drawCardFromDeck() {
     const drawnCardData = playerDeck.pop(); 
     hand.appendChild(createCard(drawnCardData));
     updateDeckUI();
+    updateAllCardsUI();
 }
 
 updateDeckUI();
