@@ -26,6 +26,7 @@ let enemyHP = 20;
 let battlesLost = 0;
 let roundStrBuff = 0;
 let roundConBuff = 0;
+let roundDamageReduction = 0;
 
 let myCoreEcho;
 let aiCoreEcho;
@@ -163,7 +164,6 @@ function createCard(cardData, existingModulations = 0) {
     const card = document.createElement('div');
     card.classList.add('card');
     card.setAttribute('draggable', 'true');
-    //spar data för miniräknare
     card.dataset.cost = cardData.cost;
     card.dataset.transformEffect = cardData.transformEffect || "";
     card.dataset.transformCost = cardData.transformCost !== undefined ? cardData.transformCost : cardData.cost;
@@ -178,6 +178,9 @@ function createCard(cardData, existingModulations = 0) {
     cardData.tempStr = cardData.tempStr || 0;
     cardData.tempCon = cardData.tempCon || 0;
     cardData.buffDuration = cardData.buffDuration || 0;
+    card.dataset.tempStr = cardData.tempStr;
+    card.dataset.tempCon = cardData.tempCon;
+    card.dataset.buffDuration = cardData.buffDuration;
     card.dataset.specialSkill = cardData.specialSkill || ""; 
     card.dataset.activeSpecialSkill = cardData.activeSpecialSkill || "";
 
@@ -328,6 +331,21 @@ readyBtn.addEventListener('click', () => {
             updatedCard.con += 2;
             console.log(`[CORE SKILL] ${updatedCard.name} fick +2 CON från Feilian Beringal!`);
         }
+        // lägger dessa två här för att säkra att spelet bara applicerar effekterna tillförlitligt när korten faktiskt befinner sig på brädet
+        if (updatedCard.name === "Abyssal Patricius") {
+            if (currentRound <= 4) {
+                updatedCard.str += 2;
+                updatedCard.con += 2;
+                console.log(`[ECHO SKILL] Abyssal Patricius fick +2 STR/CON (Aktiv i runda ${currentRound}/4).`);
+            } else {
+                console.log(`[ECHO SKILL] Abyssal Patricius effekt är inaktiv (Runda ${currentRound} är över gränsen).`);
+            }
+        }
+        // lägger dessa två här för att säkra att spelet bara applicerar effekterna tillförlitligt när korten faktiskt befinner sig på brädet
+        if (updatedCard.name === "Carapace") {
+            updatedCard.dmg += 3;
+            console.log(`[ECHO SKILL] Carapace anpassade effekt ger +3 extra DMG i striden!`);
+        }
 
         return updatedCard;
     });
@@ -364,9 +382,15 @@ readyBtn.addEventListener('click', () => {
                 setTimeout(() => enemyHpCircle.classList.remove('shake'), 500);
             }
         } else if (!combatResult.draw) {
-            playerHP -= combatResult.enemyDamageDealt;
+            const damageTaken = Math.max(0, combatResult.enemyDamageDealt - roundDamageReduction);
+            playerHP -= damageTaken;
             battlesLost++;
-            alert(`Motståndare vann. Du tog ${combatResult.enemyDamageDealt} i skada.`);
+            
+            if (roundDamageReduction > 0) {
+                alert(`Motståndare vann. Du tog ${damageTaken} i skada (Ditt skal blockade ${roundDamageReduction}!).`);
+            } else {
+                alert(`Motståndare vann. Du tog ${damageTaken} i skada.`);
+            }
             
             if (playerHpCircle) {
                 playerHpCircle.classList.add('shake');
@@ -392,6 +416,7 @@ readyBtn.addEventListener('click', () => {
         currentEnergy = maxEnergy;
         roundStrBuff = 0;
         roundConBuff = 0;
+        roundDamageReduction = 0;
         const boardCardsElements = [...frontline.children, ...backline.children];
         boardCardsElements.forEach(cardEl => {
             let cardData = JSON.parse(cardEl.dataset.fullData);
@@ -564,6 +589,18 @@ zones.forEach(zone => {
                 shuffleDeck(playerDeck);
                 updateDeckUI();
                 console.log(`Transform: Valde ${chosenCard.name} från leken.`);
+            }
+            // hoartoise transform
+            else if (effect === "hoartoiseBlock") {
+                roundDamageReduction += 3; 
+                console.log(`Transform: Hoartoise! Tar ${roundDamageReduction} mindre skada denna runda.`);
+            }
+            // cyan feather transform
+            else if (effect === "cyanFeatherHeal") {
+                const healAmount = 6; 
+                playerHP = Math.min(20, playerHP + healAmount);
+                updateHPUI();
+                console.log(`Transform: Cyan Feather! Helade ${healAmount} HP.`);
             }
 
             updateEnergyUI();
