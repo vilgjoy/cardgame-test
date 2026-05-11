@@ -42,63 +42,88 @@ let playerDeck = [];
 let aiDeck = [];
 let cardCounts = {}; 
 
-const infernoDeckList = [
-    "Chop Chop Headless", "SpearBack", "Snip Snap", "Diggy Duggy", "Sabyr Boar", 
-    "Fusion Warrior", "Dwarf Cassowary", "Fission Junrock", "La Guardia", "Baby Viridblaze"
-];
+// const infernoDeckList = [
+//     "Chop Chop Headless", "SpearBack", "Snip Snap", "Diggy Duggy", "Sabyr Boar", 
+//     "Fusion Warrior", "Dwarf Cassowary", "Fission Junrock", "La Guardia", "Baby Viridblaze"
+// ];
 
-const feilianDeckList = [
-    "Carapace", "Diggy Duggy", "Sabyr Boar", "Hoartoise", "Aero Predator", 
-    "Diamond Claw", "Vanguard Junrock", "Abyssal Patricius", "Cyan Feather", "Fission Junrock"
-];
+// const feilianDeckList = [
+//     "Carapace", "Diggy Duggy", "Sabyr Boar", "Hoartoise", "Aero Predator", 
+//     "Diamond Claw", "Vanguard Junrock", "Abyssal Patricius", "Cyan Feather", "Fission Junrock"
+// ];
 
-const playerChoseCore = confirm("VÄLJ CORE ECHO\nKlicka OK för att få INFERNO RIDER.\nKlicka AVBRYT för att få FEILIAN BERINGAL.");
+async function initGame() {
+    const playerChoseCore = confirm("VÄLJ CORE ECHO\nOK = INFERNO RIDER\nAVBRYT = FEILIAN BERINGAL");
 
-if (playerChoseCore) {
-    myCoreEcho = coreEchoes.infernoRider;
-    playerDeck = createSpecificDeck(infernoDeckList);
-    
-    aiCoreEcho = coreEchoes.feilianBeringal;
-    aiDeck = createSpecificDeck(feilianDeckList);
-} else {
-    myCoreEcho = coreEchoes.feilianBeringal;
-    playerDeck = createSpecificDeck(feilianDeckList);
-    
-    aiCoreEcho = coreEchoes.infernoRider;
-    aiDeck = createSpecificDeck(infernoDeckList);
-}
+    let myDeckName = playerChoseCore ? "Inferno" : "Feilian";
+    let aiDeckName = playerChoseCore ? "Feilian" : "Inferno";
 
-shuffleDeck(playerDeck);
-shuffleDeck(aiDeck);
+    try {
+        const playerResponse = await fetch(`http://localhost:3000/deck/${myDeckName}`);
+        const playerRawCards = await playerResponse.json();
+        
+        let allPlayerCards = playerRawCards.map(dbData => formatCardData(dbData));
 
+        myCoreEcho = allPlayerCards.find(c => c.isCore);
+        let normalCards = allPlayerCards.filter(c => !c.isCore);
 
+        playerDeck = [];
+        normalCards.forEach(card => {
+            playerDeck.push({ ...card });
+            playerDeck.push({ ...card });
+        });
 
-while (playerDeck.length < 20) {
-    const randomCard = cardDatabase[Math.floor(Math.random() * cardDatabase.length)];
-    
-    if (!cardCounts[randomCard.name]) {
-        cardCounts[randomCard.name] = 0;
-    }
+        const aiResponse = await fetch(`http://localhost:3000/deck/${aiDeckName}`);
+        const aiRawCards = await aiResponse.json();
+        let allAICards = aiRawCards.map(dbData => formatCardData(dbData));
 
-    if (cardCounts[randomCard.name] < 2) {
-        playerDeck.push(randomCard);
-        cardCounts[randomCard.name]++; 
-    }
-}
+        aiCoreEcho = allAICards.find(c => c.isCore);
+        let aiNormalCards = allAICards.filter(c => !c.isCore);
 
-function createSpecificDeck(cardNames) {
-    let deck = [];
-    cardNames.forEach(name => {
-        const baseCard = cardDatabase.find(c => c.name === name);
-        if (baseCard) {
-            deck.push({ ...baseCard });
-            deck.push({ ...baseCard }); // Kopiera kortet igen (x2)
-        } else {
-            console.error(`Kortet "${name}" saknas i cardDatabase!`);
+        aiDeck = [];
+        aiNormalCards.forEach(card => {
+            aiDeck.push({ ...card });
+            aiDeck.push({ ...card });
+        });
+
+        shuffleDeck(playerDeck);
+        shuffleDeck(aiDeck);
+        
+        updateDeckUI();
+        
+        hand.innerHTML = '';
+        for (let i = 0; i < 4; i++) {
+            drawCardFromDeck();
         }
-    });
-    return deck;
+        takeAITurn();
+
+    } catch (error) {
+        console.error("Kunde inte hämta korten från databasen:", error);
+    }
 }
+
+function formatCardData(dbData) {
+    return {
+        id: dbData.id,
+        name: dbData.name,
+        cost: dbData.cost,
+        str: dbData.str,
+        dmg: dbData.dmg,
+        con: dbData.con,
+        isCore: dbData.is_core === 1,
+        transformEffect: dbData.transform_effect || "",
+        transformCost: dbData.transform_cost || dbData.cost,
+        modulateEffect: dbData.modulate_effect || "",
+        specialSkill: dbData.special_effect || "",
+        skillText: dbData.skill_text || "",
+        tempStr: 0,
+        tempCon: 0,
+        buffDuration: 0,
+        activeSpecialSkill: ""
+    };
+}
+
+initGame();
 
 function updateHPUI() {
     if (playerHpText) playerHpText.innerText = playerHP;
@@ -203,7 +228,7 @@ function createCard(cardData, existingModulations = 0) {
         <div class="card-cost">💎 ${cardData.cost}</div>
         <div class="card-name">${cardData.name}</div>
         ${cardData.skillText ? `<div class="card-skill" style="font-size: 10px; color: #f1c40f; text-align: center; margin-top: 5px; font-style: italic;">✨ ${cardData.skillText}</div>` : ''}
-        ${cardData.activeSpecialSkill ? `<div class="active-skill" style="font-size: 10px; color: #e74c3c; font-weight: bold; text-align: center;">🔥 ${cardData.activeSpecialSkill.toUpperCase()} AKTIVERAD!</div>` : ''}
+        ${cardData.activeSpecialSkill ? `<div class="active-skill" style="font-size: 10px; color: #e74c3c; font-weight: bold; text-align: center;">🔥 ${cardData.activeSpecialSkill.toUpperCase()} ACTIVATED!</div>` : ''}
         <div class="card-stats">
             <span class="stat-str" title="Strength">⚔️ ${cardData.str}</span>
             <span class="stat-dmg" title="Damage">💥 ${cardData.dmg}</span>

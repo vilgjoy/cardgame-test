@@ -1,10 +1,9 @@
-// En klass för våra ekon när de blir cirklar
 class EchoCircle {
     constructor(cardData, isPlayer, canvasWidth, canvasHeight) {
         this.name = cardData.name;
         this.str = parseInt(cardData.str);
         this.dmg = parseInt(cardData.dmg);
-        this.hp = parseInt(cardData.con); // Constitution = HP
+        this.hp = parseInt(cardData.con); 
         this.maxHp = this.hp;
         this.isPlayer = isPlayer;
         
@@ -29,7 +28,6 @@ class EchoCircle {
         ctx.stroke();
         ctx.closePath();
 
-        // Rita HP-text i mitten
         ctx.fillStyle = '#fff';
         ctx.font = '14px Arial';
         ctx.textAlign = 'center';
@@ -49,15 +47,13 @@ class EchoCircle {
     }
 }
 
-// BARA EN startCombat-funktion!
 export function startCombat(canvas, playerCards, enemyCards, onCombatComplete) {
     const ctx = canvas.getContext('2d');
     let animationId;
 
-    // Fatigue-variabler
     let startTime = Date.now();
-    const fatigueDelay = 15000; // 15 sekunder innan skadan börjar
-    const fatigueInterval = 1000; // Skada sker varje sekund (1000ms)
+    const fatigueDelay = 15000; 
+    const fatigueInterval = 1000; 
     let lastFatigueTick = 0;
     let fatigueDamage = 1; 
 
@@ -66,7 +62,6 @@ export function startCombat(canvas, playerCards, enemyCards, onCombatComplete) {
         ...enemyCards.map(c => new EchoCircle(c, false, canvas.width, canvas.height))
     ];
 
-    // Det är här all matte som räknar ut krockar sker!
     function checkCollisions() {
         for (let i = 0; i < circles.length; i++) {
             for (let j = i + 1; j < circles.length; j++) {
@@ -103,7 +98,6 @@ export function startCombat(canvas, playerCards, enemyCards, onCombatComplete) {
         const currentTime = Date.now();
         const elapsed = currentTime - startTime;
 
-        //FATIGUE LOGIK 
         if (elapsed > fatigueDelay) {
             if (currentTime - lastFatigueTick > fatigueInterval) {
                 circles.forEach(c => {
