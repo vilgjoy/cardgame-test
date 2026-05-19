@@ -1,6 +1,7 @@
-import { cardDatabase, coreEchoes } from './cards.js';
+
 import { startCombat } from './combat.js';
 
+let allCardsLookup = [];
 const hand = document.getElementById('hand');
 const frontline = document.getElementById('frontline'); 
 const backline = document.getElementById('backline');   
@@ -21,7 +22,7 @@ const enemyBoard = document.getElementById('enemy-board');
 const maxEnergy = 4;
 let currentEnergy = 4;
 let currentRound = 1;
-let playerHP = 16;
+let playerHP = 20;
 let enemyHP = 20;
 let battlesLost = 0;
 let roundStrBuff = 0;
@@ -40,17 +41,7 @@ let aiBoardData = [];
 // deck
 let playerDeck = [];
 let aiDeck = [];
-let cardCounts = {}; 
-
-// const infernoDeckList = [
-//     "Chop Chop Headless", "SpearBack", "Snip Snap", "Diggy Duggy", "Sabyr Boar", 
-//     "Fusion Warrior", "Dwarf Cassowary", "Fission Junrock", "La Guardia", "Baby Viridblaze"
-// ];
-
-// const feilianDeckList = [
-//     "Carapace", "Diggy Duggy", "Sabyr Boar", "Hoartoise", "Aero Predator", 
-//     "Diamond Claw", "Vanguard Junrock", "Abyssal Patricius", "Cyan Feather", "Fission Junrock"
-// ];
+// let cardCounts = {}; 
 
 async function initGame() {
     const playerChoseCore = confirm("VÄLJ CORE ECHO\nOK = INFERNO RIDER\nAVBRYT = FEILIAN BERINGAL");
@@ -61,25 +52,24 @@ async function initGame() {
     try {
         const playerResponse = await fetch(`http://localhost:3000/deck/${myDeckName}`);
         const playerRawCards = await playerResponse.json();
-        
-        let allPlayerCards = playerRawCards.map(dbData => formatCardData(dbData));
+        let playerFormatted = playerRawCards.map(dbData => formatCardData(dbData));
 
-        myCoreEcho = allPlayerCards.find(c => c.isCore);
-        let normalCards = allPlayerCards.filter(c => !c.isCore);
+        const aiResponse = await fetch(`http://localhost:3000/deck/${aiDeckName}`);
+        const aiRawCards = await aiResponse.json();
+        let aiFormatted = aiRawCards.map(dbData => formatCardData(dbData));
 
+        allCardsLookup = [...playerFormatted, ...aiFormatted];
+
+        myCoreEcho = playerFormatted.find(c => c.isCore);
+        let normalCards = playerFormatted.filter(c => !c.isCore);
         playerDeck = [];
         normalCards.forEach(card => {
             playerDeck.push({ ...card });
             playerDeck.push({ ...card });
         });
 
-        const aiResponse = await fetch(`http://localhost:3000/deck/${aiDeckName}`);
-        const aiRawCards = await aiResponse.json();
-        let allAICards = aiRawCards.map(dbData => formatCardData(dbData));
-
-        aiCoreEcho = allAICards.find(c => c.isCore);
-        let aiNormalCards = allAICards.filter(c => !c.isCore);
-
+        aiCoreEcho = aiFormatted.find(c => c.isCore);
+        let aiNormalCards = aiFormatted.filter(c => !c.isCore);
         aiDeck = [];
         aiNormalCards.forEach(card => {
             aiDeck.push({ ...card });
@@ -90,7 +80,6 @@ async function initGame() {
         shuffleDeck(aiDeck);
         
         updateDeckUI();
-        
         hand.innerHTML = '';
         for (let i = 0; i < 4; i++) {
             drawCardFromDeck();
@@ -98,7 +87,7 @@ async function initGame() {
         takeAITurn();
 
     } catch (error) {
-        console.error("Kunde inte hämta korten från databasen:", error);
+        console.error("Kunde inte hämta korten:", error);
     }
 }
 
@@ -467,7 +456,7 @@ readyBtn.addEventListener('click', () => {
         cardsInHand.forEach(card => {
             const cardData = JSON.parse(card.dataset.fullData);
             if (!cardData.isCore) {
-                const baseCard = cardDatabase.find(c => c.name === cardData.name);
+                const baseCard = allCardsLookup.find(c => c.name === cardData.name);
                 playerDeck.push(baseCard);
             }
         });
@@ -478,7 +467,7 @@ readyBtn.addEventListener('click', () => {
 
         aiBoardData.forEach(card => {
             if (!card.isCore) {
-                const baseCard = cardDatabase.find(c => c.name === card.name);
+                const baseCard = allCardsLookup.find(c => c.name === card.name);
                 if (baseCard) {
                     aiDeck.push({ ...baseCard });
                 }
@@ -640,7 +629,7 @@ zones.forEach(zone => {
 
             const cardData = JSON.parse(draggingCard.dataset.fullData);
             if (!cardData.isCore) {
-                const baseCard = cardDatabase.find(c => c.name === cardData.name);
+                const baseCard = allCardsLookup.find(c => c.name === cardData.name);
                 playerDeck.push(baseCard);
                 shuffleDeck(playerDeck);
                 updateDeckUI();
@@ -785,7 +774,7 @@ zones.forEach(zone => {
             updateEnergyUI();
 
             const cardData = JSON.parse(draggingCard.dataset.fullData);
-            const baseCard = cardDatabase.find(c => c.name === cardData.name);
+            const baseCard = allCardsLookup.find(c => c.name === cardData.name);
             const resetCard = createCard(baseCard);
 
             zone.appendChild(resetCard);
@@ -809,9 +798,5 @@ function drawCardFromDeck() {
     updateAllCardsUI();
 }
 
-updateDeckUI();
-for (let i = 0; i < 4; i++) {
-    drawCardFromDeck();
-}
 
 drawBtn.addEventListener('click', drawCardFromDeck);
