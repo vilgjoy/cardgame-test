@@ -50,11 +50,11 @@ async function initGame() {
     let aiDeckName = playerChoseCore ? "Feilian" : "Inferno";
 
     try {
-        const playerResponse = await fetch(`http://localhost:3000/deck/${myDeckName}`);
+        const playerResponse = await fetch(`/deck/${myDeckName}`);
         const playerRawCards = await playerResponse.json();
         let playerFormatted = playerRawCards.map(dbData => formatCardData(dbData));
 
-        const aiResponse = await fetch(`http://localhost:3000/deck/${aiDeckName}`);
+        const aiResponse = await fetch(`/deck/${aiDeckName}`);
         const aiRawCards = await aiResponse.json();
         let aiFormatted = aiRawCards.map(dbData => formatCardData(dbData));
 

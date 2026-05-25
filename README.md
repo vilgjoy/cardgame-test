@@ -11,3 +11,5 @@ combat.js Renderar och simulerar strid i en canvas med cirklar för varje kort, 
 index.njk HTML-mallen för spelets sida: layout, spelplan, hand, energi, HP och script-tagg.
 
 database.js skapar en MySQL-anslutningspool med mysql2/promise för databasen
+
+Jag vet inte hur mycket jag har lärt mig vid denna period. Det mesta jag gjorde var att följa en tutorial på youtube och själva kortspelet är av andra. Det jag dock kan säga är att jag lärde mig ganska mycket kring databaser. Hur man gjorde en, hur man kunde använda en och sedan hur man kunde koppla det med sin nuvarande kod. Det var inte lika svårt som man trodde, det som tog mest tid var att lägga till varje kort i databasen som väl tog en timme.
