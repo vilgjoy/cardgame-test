@@ -27,4 +27,5 @@ db.exec(`
     );
 `);
 
+db.close();
 export default db;
