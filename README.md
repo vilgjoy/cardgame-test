@@ -12,4 +12,9 @@ index.njk HTML-mallen för spelets sida: layout, spelplan, hand, energi, HP och 
 
 database.js skapar en MySQL-anslutningspool med mysql2/promise för databasen
 
-Jag vet inte hur mycket jag har lärt mig vid denna period. Det mesta jag gjorde var att följa en tutorial på youtube och själva kortspelet är av andra. Det jag dock kan säga är att jag lärde mig ganska mycket kring databaser. Hur man gjorde en, hur man kunde använda en och sedan hur man kunde koppla det med sin nuvarande kod. Det var inte lika svårt som man trodde, det som tog mest tid var att lägga till varje kort i databasen som väl tog en timme.
+Jag vet inte hur mycket jag har lärt mig vid denna period. Det mesta jag gjorde var att följa en tutorial på youtube och själva kortspelet är av andra. Det jag dock kan säga är att jag lärde mig ganska mycket kring databaser. Hur man gjorde en, hur man kunde använda en och sedan hur man kunde koppla det med sin nuvarande kod. Speciellt med att använda SQL och kunna hosta det på render.com. Att kunna hosta tog två lektioner och det slutade med att jag exporterade min SQL fil på min databas och la in det i min db.js. 
+
+Jag la upp detta på WAVE där jag fick ganska många kontrast error på varje kort och mycket liten text på korten. Varför det är liten text var för att jag inte vill stretcha ut korten, så texten behöver vara liten. För kontrast errors så tog jag färger där man kunde se texten på ett vitt kort.
+
+Jag har använt mig av ganska många tekniker som jag fick från de olika videorna, och såklart Jens hemsida. Express + MySQL ger snabb server-API för att hämta speldata från DB, ES-moduler + async/await förbättrar läsbarheten och hanteringen av asynkrona flöden, Fetch + DOM + drag-and-drop gör klienten interaktiv utan tunga ramverk, Canvas + requestAnimationFrame är lämpligt för realtidsanimationer (stridssimulering),
+Nunjucks ger enkel server-rendering för start-HTML medan klienten hanterar dynamik.
